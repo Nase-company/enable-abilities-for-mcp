@@ -9,6 +9,9 @@
  * file names on Linux hosts.
  *
  * Usage:  php build-release-zip.php 2.10.1
+ * NC fork: php build-release-zip.php 2.14.1 --local
+ * --local packages an allowlisted checkout with composer install --no-dev vendor.
+ * It never downloads the same-numbered upstream SVN tag for a fork release.
  * Output: dist/enable-abilities-for-mcp-2.10.1.zip
  *
  * Requires the svn command line client and the zip PHP extension. If php.ini
@@ -25,6 +28,7 @@ if ( 'cli' !== PHP_SAPI ) {
 
 $slug    = 'enable-abilities-for-mcp';
 $version = $argv[1] ?? '';
+$local   = in_array( '--local', $argv, true );
 
 if ( ! preg_match( '/^\d+\.\d+\.\d+$/', $version ) ) {
 	fwrite( STDERR, 'Usage: php build-release-zip.php <version>   e.g. 2.10.1' . PHP_EOL );
@@ -75,10 +79,39 @@ function ewpa_fail( string $message, string $work ): void {
 ewpa_rrmdir( $work );
 mkdir( $work, 0777, true );
 
-echo 'Exporting ' . $url . PHP_EOL;
-exec( 'svn export --force -q ' . escapeshellarg( $url ) . ' ' . escapeshellarg( $export ) . ' 2>&1', $output, $code );
-if ( 0 !== $code || ! is_file( $export . '/' . $slug . '.php' ) ) {
-	ewpa_fail( 'svn export failed: ' . implode( ' ', $output ), $work );
+echo ( $local ? 'Packaging allowlisted local checkout' : 'Exporting ' . $url ) . PHP_EOL;
+if ( $local ) {
+	$installed = json_decode( (string) @file_get_contents( __DIR__ . '/vendor/composer/installed.json' ), true );
+	if ( ! is_array( $installed ) || ! array_key_exists( 'dev', $installed ) || false !== $installed['dev'] ) {
+		ewpa_fail( 'Local build requires composer install --no-dev first.', $work );
+	}
+	mkdir( $export, 0755, true );
+	$allow = array( $slug . '.php', 'uninstall.php', 'LICENSE', 'readme.txt', 'changelog.txt', 'includes', 'assets', 'languages', 'vendor' );
+	foreach ( $allow as $entry ) {
+		$source = __DIR__ . '/' . $entry;
+		if ( is_link( $source ) || ! file_exists( $source ) ) {
+			ewpa_fail( 'Missing or linked allowlisted source.', $work );
+		}
+		$paths = is_dir( $source ) ? new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $source, FilesystemIterator::SKIP_DOTS ) ) : array( new SplFileInfo( $source ) );
+		foreach ( $paths as $file ) {
+			if ( $file->isLink() || ! $file->isFile() ) {
+				ewpa_fail( 'Local build requires regular files only.', $work );
+			}
+			$relative = substr( $file->getPathname(), strlen( __DIR__ ) + 1 );
+			$target_file = $export . '/' . $relative;
+			if ( ! is_dir( dirname( $target_file ) ) ) {
+				mkdir( dirname( $target_file ), 0755, true );
+			}
+			if ( ! copy( $file->getPathname(), $target_file ) ) {
+				ewpa_fail( 'Local source copy failed.', $work );
+			}
+		}
+	}
+} else {
+	exec( 'svn export --force -q ' . escapeshellarg( $url ) . ' ' . escapeshellarg( $export ) . ' 2>&1', $output, $code );
+	if ( 0 !== $code || ! is_file( $export . '/' . $slug . '.php' ) ) {
+		ewpa_fail( 'svn export failed: ' . implode( ' ', $output ), $work );
+	}
 }
 
 // The main file must declare the requested version.
@@ -121,7 +154,11 @@ if ( true !== $zip->open( $target, ZipArchive::CREATE | ZipArchive::OVERWRITE ) 
 	ewpa_fail( 'Could not create ' . $target, $work );
 }
 foreach ( $files as $relative => $path ) {
-	$zip->addFile( $path, $slug . '/' . $relative );
+	$name = $slug . '/' . $relative;
+	if ( ! $zip->addFile( $path, $name ) || ! $zip->setMtimeName( $name, 315532800 ) ) {
+		$zip->close();
+		ewpa_fail( 'Could not add a deterministic release entry.', $work );
+	}
 }
 $zip->close();
 
