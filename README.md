@@ -1,5 +1,23 @@
 # Enable Abilities for MCP
 
+**NC fork 2.14.1** — based on [Fabio Montenegro / upstream 2.14.0](https://github.com/FabioMontenegro/enable-abilities-for-mcp), retaining original attribution and GPLv2-or-later licensing. Fork: https://github.com/Nase-company/enable-abilities-for-mcp. The fork Update URI blocks automatic replacement by the WordPress.org upstream package; it does not implement a GitHub updater.
+
+## Preserved-image-original replacement
+
+`ewpa/inspect-media-original` reads one attachment by `attachment_id`, returning upload-relative filenames, byte counts, MIME, SHA-256 file hashes and an exact raw attachment post/meta digest. It does not disclose server absolute paths. On existing installations, enable inspection explicitly in Settings → WP Abilities if absent from the saved allowlist.
+
+`ewpa/replace-media-original` is **destructive, opt-in and OFF by default**, including upgrades. Both abilities require administrator maintenance capability `manage_options`, native `upload_files` and object-level `edit_post`; ordinary authors cannot replace even their own original. Enable the write ability only for an explicitly authorized operation, then turn it off again. No general code execution or Bricks settings are changed.
+
+1. Independently archive the original externally, and verify the archived bytes against inspection’s `original_sha256`. This plugin provides **no backup, cloud verification or restoration**.
+2. Pass `attachment_id`, `expected_original_sha256`, `expected_main_sha256`, `expected_metadata_sha256`, `external_archive_sha256` (equal to the archived original hash), and `confirm_replace: true`. Obtain fresh guards after any intervening attachment edit. The acknowledgment is only a caller assertion, **not server-verified proof that any archive exists**; every result explicitly reports `backup_verified: false`. No path, URL, content, arbitrary PHP or base64 input is accepted.
+3. Only the already-retained original is atomically overwritten, at its unchanged filename/path, with byte-identical content from this attachment’s canonical existing main image. No decoding/re-encoding, re-upload, new ID, URL change, thumbnail regeneration or attachment post/meta update occurs. Alt/title/caption/description, image metadata and size references stay byte-for-byte unchanged. Standard activity logging still applies. The old original resolution/EXIF and future full-resolution editing capability are deliberately lost from this installation.
+4. Verify returned hashes and `bytes_saved`. Old request replay is rejected as stale; a freshly inspected equal/smaller original is refused with `no_byte_benefit`. There is no automatic retry. `outcome_unknown` means the rename may have happened but verification failed: inspect externally before any further action.
+
+**Conservative limits:** local Linux/POSIX uploads; required filesystem functions including `fsync` (PHP 8.1+) must be available; regular single-link files, no symlink ancestors or world-writable parents; safe ASCII metadata path segments; same WordPress-allowed JPEG or static WebP MIME/extension; each file at most 512 MiB; WebP container at most 1024 chunks. PDF/SVG/GIF/AVIF and animated WebP are unsupported. No giant-image pixel decode is needed. File mode and uid/gid are preserved or replacement is refused. Modification time is refreshed for HTTP conditional requests; shared attachment files and a main image that disagrees with stored dimensions are refused. Inode/ctime necessarily change; atime, ACLs/xattrs and crash-durable directory sync are not promised. A nonblocking database connection mutex serializes this feature per site and fresh paths, parent identities, post/meta rows and file hashes are rechecked before rename. This does not make a transaction with independent WordPress editors, optimizers, shell writers or a hostile same-UID process: pause other media writes for the operation. A crash before rename may leave one owned hidden staging file; there is no automatic orphan sweep.
+
+Run `php tests/media-original-test.php` and `python tests/run-media-originals.py --evidence /your/owned/receipts` for the small native filesystem tests and real disposable WordPress/MariaDB spike + acceptance. The Docker runner uses only existing images and removes only its randomly named containers and their anonymous volumes. Tests and fixtures are excluded from release packages. See [test notes](tests/media-originals.md).
+
+
 [![WordPress Plugin Version](https://img.shields.io/wordpress/plugin/v/enable-abilities-for-mcp)](https://wordpress.org/plugins/enable-abilities-for-mcp/)
 [![Active Installs](https://img.shields.io/wordpress/plugin/installs/enable-abilities-for-mcp)](https://wordpress.org/plugins/enable-abilities-for-mcp/advanced/)
 [![WordPress Tested](https://img.shields.io/wordpress/plugin/tested/enable-abilities-for-mcp)](https://wordpress.org/plugins/enable-abilities-for-mcp/)
@@ -7,7 +25,7 @@
 
 Let AI assistants like Claude manage your WordPress site through the [Model Context Protocol](https://modelcontextprotocol.io/) — with full control over exactly what they can and cannot do.
 
-**112 abilities in 21 categories**, each one individually toggleable from the dashboard: content, SEO (Rank Math / SEOPress / Yoast), navigation menus, WooCommerce, Elementor, LearnDash, Tutor LMS, JetEngine (Options Pages + Query Builder), multilanguage, `llms.txt`, FSE block templates, accessibility (WCAG), cache purge, and more.
+**114 abilities in 22 categories**, each one individually toggleable from the dashboard: content, SEO (Rank Math / SEOPress / Yoast), navigation menus, WooCommerce, Elementor, LearnDash, Tutor LMS, JetEngine (Options Pages + Query Builder), multilanguage, `llms.txt`, FSE block templates, accessibility (WCAG), cache purge, and more.
 
 ## How it works
 
@@ -17,11 +35,11 @@ This plugin completes the stack:
 
 ```
 Claude / MCP client  ──►  MCP Adapter  ──►  Abilities API  ──►  Enable Abilities for MCP
-                                                                (112 abilities + per-ability toggles
+                                                                (114 abilities + per-ability toggles
                                                                  + auth + activity log)
 ```
 
-1. It **registers 109 content-management abilities** (plus exposing the 3 native WordPress core ones to MCP).
+1. It **registers 111 content-management abilities** (plus exposing the 3 native WordPress core ones to MCP).
 2. It gives you an **admin dashboard** to enable or disable each ability individually — expose only what you need.
 3. It provides **authentication** (claude.ai OAuth custom connector, Application Passwords, or single-admin Bearer token) and an **activity log** of every ability executed.
 4. It also governs **third-party abilities**: anything other MCP-ready plugins (Fluent Forms, …) register shows up in the same dashboard, grouped by plugin, with the same toggles — disabling one removes it from every MCP server on the site.
@@ -31,6 +49,7 @@ Claude / MCP client  ──►  MCP Adapter  ──►  Abilities API  ──►
 | Category | Abilities | Highlights |
 |---|---|---|
 | **WordPress Core** | 3 | Native site/user/environment info, exposed to MCP by this plugin |
+| **Preserved Originals (NC)** | 2 | Inspect one original; opt-in, guarded same-path byte replacement |
 | **Read** | 9 | Posts, pages, categories, tags, comments, media, users — with filters |
 | **Write** | 12 | Create/update/delete posts and pages, moderate and reply to comments, upload images from URL, duplicate any post/page/CPT with meta and taxonomies, assign custom taxonomy terms to a post/page |
 | **SEO — Rank Math** | 3 | Read/write all meta + write structured-data schema blocks (FAQPage, Article, Product…) as JSON-LD |

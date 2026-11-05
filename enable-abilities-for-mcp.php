@@ -2,8 +2,9 @@
 /**
  * Plugin Name:       Enable Abilities for MCP
  * Plugin URI:        https://mcp.fabiomontenegro.com/
- * Description:       Connect Claude, ChatGPT & any MCP client to WordPress. 112 abilities: content, SEO, WooCommerce, FSE, LMS & more. Free & self-hosted.
- * Version:           2.14.0
+ * Description:       Connect Claude, ChatGPT & any MCP client to WordPress. 114 abilities: content, SEO, WooCommerce, FSE, LMS & more. Free & self-hosted.
+ * Version:           2.14.1
+ * Update URI:        https://github.com/Nase-company/enable-abilities-for-mcp
  * Requires at least: 6.9
  * Requires PHP:      8.0
  * Author:            Fabio Montenegro
@@ -19,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'EWPA_VERSION', '2.14.0' );
+define( 'EWPA_VERSION', '2.14.1' );
 define( 'EWPA_PLUGIN_FILE', __FILE__ );
 define( 'EWPA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EWPA_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -46,6 +47,7 @@ require_once EWPA_PLUGIN_DIR . 'includes/auth.php';
 require_once EWPA_PLUGIN_DIR . 'includes/admin.php';
 require_once EWPA_PLUGIN_DIR . 'includes/multilanguage.php';
 require_once EWPA_PLUGIN_DIR . 'includes/code-snippets.php';
+require_once EWPA_PLUGIN_DIR . 'includes/media-originals.php';
 require_once EWPA_PLUGIN_DIR . 'includes/abilities.php';
 require_once EWPA_PLUGIN_DIR . 'includes/thirdparty.php';
 require_once EWPA_PLUGIN_DIR . 'includes/oauth-connectors.php';
@@ -1277,6 +1279,23 @@ function ewpa_get_abilities_registry() {
 				'ewpa/get-users'      => array(
 					'label' => __( 'Get Users', 'enable-abilities-for-mcp' ),
 					'desc'  => __( 'List site users with ID, name, email, and role.', 'enable-abilities-for-mcp' ),
+				),
+			),
+		),
+		'media-originals'         => array(
+			'section_label' => __( 'Preserved Image Originals (NC fork)', 'enable-abilities-for-mcp' ),
+			'section_desc'  => __( 'Inspect retained JPEG/WebP originals. Replacement is destructive and OFF by default: archive and independently verify the old original first. The hash acknowledgment is not server-verified backup proof. Only original file bytes change; IDs, paths, URLs and all database metadata remain unchanged.', 'enable-abilities-for-mcp' ),
+			'section_icon'  => 'dashicons-format-image',
+			'section_badge' => 'warning',
+			'abilities'     => array(
+				'ewpa/inspect-media-original' => array(
+					'label' => __( 'Inspect Media Original', 'enable-abilities-for-mcp' ),
+					'desc'  => __( 'Read file sizes, hashes and metadata guard for one attachment.', 'enable-abilities-for-mcp' ),
+				),
+				'ewpa/replace-media-original' => array(
+					'label'   => __( 'Replace Media Original (destructive)', 'enable-abilities-for-mcp' ),
+					'desc'    => __( 'Overwrite the preserved original at the same path with exact existing main bytes. Requires external archival acknowledgment.', 'enable-abilities-for-mcp' ),
+					'default' => false,
 				),
 			),
 		),

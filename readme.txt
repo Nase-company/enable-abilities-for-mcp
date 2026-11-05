@@ -5,11 +5,11 @@ Tags: mcp, ai, rest-api, content-management, woocommerce
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 2.14.0
+Stable tag: 2.14.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Connect Claude, ChatGPT & any MCP client to WordPress. 112 abilities: content, SEO, WooCommerce, FSE, LMS & more. Free & self-hosted.
+Connect Claude, ChatGPT & any MCP client to WordPress. 114 abilities: content, SEO, WooCommerce, FSE, LMS & more. Free & self-hosted.
 
 == Description ==
 
@@ -40,7 +40,7 @@ Prefer tokens? Application Passwords (per-user) and a single-admin Bearer token 
 
 = Features =
 
-* **112 abilities** organized in 21 categories: Core, Read, Write, SEO (Rank Math), SEO (SEOPress), SEO (Yoast), Navigation Menus, Utility, Multilanguage, Custom Post Types, WooCommerce, The Events Calendar, Code Snippets, JetEngine Options Pages, JetEngine Query Builder, Elementor, LearnDash, Tutor LMS, AI Agent Readiness (llms.txt), FSE Block Templates, and Accessibility (WCAG)
+* **114 abilities** organized in 22 categories: Preserved Image Originals (NC), Core, Read, Write, SEO (Rank Math), SEO (SEOPress), SEO (Yoast), Navigation Menus, Utility, Multilanguage, Custom Post Types, WooCommerce, The Events Calendar, Code Snippets, JetEngine Options Pages, JetEngine Query Builder, Elementor, LearnDash, Tutor LMS, AI Agent Readiness (llms.txt), FSE Block Templates, and Accessibility (WCAG)
 * **WooCommerce integration** — dedicated abilities to manage products, orders, and customers using the native WooCommerce API (HPOS-compatible, formally declared)
 * **The Events Calendar integration** — list, get, create, and update events with venue, organizer, and date filters
 * **claude.ai OAuth custom connector** — connect from claude.ai (web, mobile, or desktop) with zero local setup: an embedded OAuth 2.1 server with Client ID Metadata Document (CIMD) support lets each user log in with their own WordPress account and role
@@ -260,6 +260,12 @@ Yes — strict OAuth clients require a direct `200` on `/.well-known/oauth-autho
 
 == Changelog ==
 
+= 2.14.1 (NC fork) =
+* NC fork of Fabio Montenegro's GPLv2-or-later plugin, based on upstream 2.14.0. Update URI points to https://github.com/Nase-company/enable-abilities-for-mcp to prevent WordPress.org replacement.
+* Added inspect-media-original and default-OFF replace-media-original for one retained JPEG/static WebP original. Exact existing main bytes replace only that same original path; no re-encoding, attachment deletion or database metadata changes. Native upload_files and edit_post permissions, canonical uploads paths, hashes/metadata stale guards, single-link/symlink checks, a nonblocking lock, staged copy and atomic rename/readback.
+* Explicit external archive SHA-256 acknowledgment is required, but is NOT server-verified backup proof. Archive and independently verify old bytes before use. No backup or restore service is provided. Linux/local filesystem and PHP fsync support required; unsupported or unsafe files and zero/negative savings are refused.
+* Added native WordPress feasibility spike, regression and authenticated HTTP Abilities acceptance with isolated Docker fixtures. Production sites were not changed.
+
 = 2.14.0 =
 * Fixed: the four WooCommerce read abilities asked for a capability to *edit* instead of one to *read*, so a user whose role was built to read orders and products and nothing else was refused. `ewpa/wc-get-orders` and `ewpa/wc-get-order` now ask for `read_private_shop_orders`, and `ewpa/wc-get-products` and `ewpa/wc-get-product` for `read_private_products`. Nobody loses access: a role that only holds the old `edit_shop_orders` or `edit_products` is still accepted. Plain `read` is not enough, and is not meant to be — order data carries the buyer's name, address, e-mail and phone, so the role still has to be given the capability to read private records of that type. Reported by @petis.
 * New: the `ewpa_ability_capability` filter changes the capability an ability requires, as `( $capability, $ability )`. It is currently routed through those four WooCommerce abilities, so a read-only role can be given exactly the access it needs. It tightens as readily as it loosens, and when it is used the built-in capability is no longer accepted, so the value you return is the only one that grants access. An empty or numeric value is refused and the built-in capability stands: WordPress rewrites a numeric capability into `level_0`, which every subscriber holds, so a site writing `'0'` to close the door would have opened it to every logged-in user instead.
@@ -427,6 +433,9 @@ Yes — strict OAuth clients require a direct `200` on `/.well-known/oauth-autho
 * See [changelog.txt](https://plugins.trac.wordpress.org/browser/enable-abilities-for-mcp/trunk/changelog.txt) for the full history of older versions.
 
 == Upgrade Notice ==
+
+= 2.14.1 =
+NC fork: default-OFF preserved-original replacement. Independently archive and verify original bytes first; this plugin does not verify backups. Fork Update URI prevents upstream auto-overwrite.
 
 = 2.14.0 =
 Fixes the four WooCommerce read abilities, which asked for a capability to edit instead of one to read, so a role built only to read orders and products was refused. Roles that worked before keep working. Adds the `ewpa_ability_capability` filter, and a Settings link in the plugin's row on the Plugins screen.
